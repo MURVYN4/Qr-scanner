@@ -21,3 +21,72 @@
     <div id="qr-result"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <script>
+        const video = document.getElementById('video');
+        const qrResult = document.getElementById('qr-result');
+        let streamStarted = false;
+
+        // Start camera
+        function startCamera() {
+            if (streamStarted) return;
+
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: "environment" } }  // This accesses the back camera
+            }).then(stream => {
+                video.srcObject = stream;
+                video.play();
+                streamStarted = true;
+                scanQRCode();
+            }).catch(err => {
+                qrResult.textContent = "Camera access error: " + err.message;
+            });
+        }
+
+        // Scan QR Code
+        function scanQRCode() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            const scan = () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                    if (qrCode) {
+                        qrResult.textContent = `QR Code Data: ${qrCode.data}`;
+                        
+                        // Check if the QR code data is a URL and redirect
+                        if (isValidURL(qrCode.data)) {
+                            window.location.href = qrCode.data;  // Redirect to the URL
+                        } else {
+                            qrResult.textContent = `Scanned Data: ${qrCode.data}`;
+                        }
+                        return;
+                    }
+                }
+                requestAnimationFrame(scan);
+            };
+            scan();
+        }
+
+        // Helper function to check if the scanned data is a valid URL
+        function isValidURL(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Automatically start the camera when the page loads
+        window.onload = () => {
+            startCamera();
+        };
+    </script>
+</body>
+</html>
