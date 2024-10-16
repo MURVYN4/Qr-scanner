@@ -57,7 +57,7 @@
                     const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
 
                     if (qrCode) {
-                        qrResult.textContent = `QR Code Data: ${qrCode.data}`;
+                        qrResult.linkContent = `QR Code Data: ${qrCode.data}`;
                         return;
                     }
                 }
