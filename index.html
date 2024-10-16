@@ -61,7 +61,17 @@
                         
                         // Check if the QR code data is a URL and redirect
                         if (isValidURL(qrCode.data)) {
-                            window.location.href = qrCode.data;  // Redirect to the URL
+                            qrResult.textContent = `Redirecting to ${qrCode.data}...`;
+                            
+                            // Delay before redirection (e.g., 3 seconds)
+                            setTimeout(() => {
+                                window.location.href = qrCode.data;
+                                
+                                // Return to the QR code scanning page after 5 seconds
+                                setTimeout(() => {
+                                    window.history.back(); // Simulates returning to the scanning page
+                                }, 5000);
+                            }, 3000);  // Delay before redirection
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
                         }
