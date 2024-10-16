@@ -3,34 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Access Example</title>
+    <title>QR Code Reader</title>
     <style>
         video {
             width: 100%;
             height: auto;
-            border: 1px solid black;
+        }
+        #qr-result {
+            margin-top: 20px;
+            font-size: 20px;
         }
     </style>
 </head>
 <body>
+    <h1>QR Code Reader</h1>
+    <video id="video" playsinline></video>
+    <div id="qr-result"></div>
 
-<div id="container">
-    <video id="video" autoplay></video>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <script>
+        const video = document.getElementById('video');
+        const qrResult = document.getElementById('qr-result');
+        let streamStarted = false;
 
-<script>
-    const video = document.getElementById('video');
+        // Start camera
+        function startCamera() {
+            if (streamStarted) return;
 
-    // Request camera access
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            // Attach the video stream to the video element
-            video.srcObject = stream;
-        })
-        .catch(error => {
-            console.error("Error accessing the camera: ", error);
-        });
-</script>
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { exact: "environment" } }  // This accesses the back camera
+            }).then(stream => {
+                video.srcObject = stream;
+                video.play();
+                streamStarted = true;
+                scanQRCode();
+            }).catch(err => {
+                qrResult.textContent = "Camera access error: " + err.message;
+            });
+        }
 
+        // Scan QR Code
+        function scanQRCode() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+
+            const scan = () => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                    if (qrCode) {
+                        qrResult.textContent = `QR Code Data: ${qrCode.data}`;
+                        return;
+                    }
+                }
+                requestAnimationFrame(scan);
+            };
+            scan();
+        }
+
+        // Automatically start the camera when page loads
+        window.onload = () => {
+            startCamera();
+        };
+    </script>
 </body>
 </html>
