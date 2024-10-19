@@ -76,18 +76,23 @@
                         // Check if the QR code data is a URL and redirect
                         if (isValidURL(qrCode.data)) {
                             qrResult.textContent = `Redirecting to ${qrCode.data}...`;
-                            
-                            // Delay before redirection (e.g., 3 seconds)
+
+                            // Delay before redirection (3 seconds) and come back to scanning page
                             setTimeout(() => {
                                 window.location.href = qrCode.data;
-                                
-                                // Return to the QR code scanning page after 5 seconds
+
+                                // Automatically go back to scanning after 5 seconds of redirection
                                 setTimeout(() => {
-                                    window.history.back(); // Simulates returning to the scanning page
+                                    window.history.back();  // Simulate returning to scanning page
                                 }, 5000);
-                            }, 3000);  // Delay before redirection
+                            }, 3000);
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
+                            // Delay 3 seconds and return to scanning page
+                            setTimeout(() => {
+                                qrResult.textContent = "Returning to QR scanning...";
+                                startCamera();  // Restart the scanning process
+                            }, 3000);
                         }
                         return;
                     }
@@ -114,7 +119,7 @@
 
         // Function to open a website when button is clicked
         function openWebsite() {
-            window.open("https://murvyn4.github.io/Qr-scanner/", "_blank");
+            window.open("https://www.example.com", "_blank");
         }
     </script>
 
