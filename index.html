@@ -27,17 +27,31 @@
             cursor: pointer;
             z-index: 100;
         }
+        /* Notification style */
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border-radius: 5px;
+            display: none;
+            z-index: 101;
+        }
     </style>
 </head>
 <body>
     <h1>QR Code Reader</h1>
     <video id="video" playsinline></video>
     <div id="qr-result"></div>
+    <div id="notification">URL loaded successfully!</div>
 
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
     <script>
         const video = document.getElementById('video');
         const qrResult = document.getElementById('qr-result');
+        const notification = document.getElementById('notification');
         let streamStarted = false;
 
         // Start camera
@@ -73,18 +87,27 @@
                     if (qrCode) {
                         qrResult.textContent = `QR Code Data: ${qrCode.data}`;
                         
-                        // Check if the QR code data is a URL and redirect
+                        // Check if the QR code data is a URL and load it in the background
                         if (isValidURL(qrCode.data)) {
-                            qrResult.textContent = `Redirecting to ${qrCode.data}...`;
+                            qrResult.textContent = `Loading ${qrCode.data} in the background...`;
 
-                            // Delay before redirection (3 seconds) and come back to scanning page
+                            // Load the URL in the background using fetch
+                            fetch(qrCode.data)
+                                .then(response => {
+                                    if (response.ok) {
+                                        showNotification("URL loaded successfully!");
+                                    } else {
+                                        showNotification("Failed to load URL.");
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error("Error loading URL: ", error);
+                                    showNotification("Error loading URL.");
+                                });
+
+                            // Delay before returning to scanning page
                             setTimeout(() => {
-                                window.location.href = qrCode.data;
-
-                                // Automatically go back to scanning after 5 seconds of redirection
-                                setTimeout(() => {
-                                    window.history.back();  // Simulate returning to scanning page
-                                }, 5000);
+                                startCamera();  // Restart the scanning process
                             }, 3000);
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
@@ -110,6 +133,15 @@
             } catch (_) {
                 return false;
             }
+        }
+
+        // Function to show a notification
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);  // Hide notification after 3 seconds
         }
 
         // Automatically start the camera when the page loads
