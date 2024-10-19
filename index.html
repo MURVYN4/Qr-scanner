@@ -105,17 +105,12 @@
                                     showNotification("Error loading URL.");
                                 });
 
-                            // Delay before returning to scanning page
-                            setTimeout(() => {
-                                startCamera();  // Restart the scanning process
-                            }, 3000);
+                            // Restart scanning immediately without delay
+                            startCamera();  // Restart the scanning process
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
-                            // Delay 3 seconds and return to scanning page
-                            setTimeout(() => {
-                                qrResult.textContent = "Returning to QR scanning...";
-                                startCamera();  // Restart the scanning process
-                            }, 3000);
+                            // Restart scanning immediately for non-URLs
+                            startCamera();  // Restart the scanning process
                         }
                         return;
                     }
