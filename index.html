@@ -100,10 +100,10 @@
                     if (qrCode) {
                         qrResult.textContent = `QR Code Data: ${qrCode.data}`;
                         
-                        // Check if the QR code data is a URL
+                        // Check if the QR code data is a URL and redirect to it
                         if (isValidURL(qrCode.data)) {
-                            qrResult.textContent = `Scanned URL: ${qrCode.data}`;
                             showNotification("URL scanned successfully!");
+                            window.location.href = qrCode.data; // Redirect to the URL in the same page
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
                         }
