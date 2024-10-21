@@ -8,12 +8,25 @@
         video {
             width: 100%;
             height: auto;
+            border: 5px solid green; /* Border to indicate the scanning area */
+            box-shadow: 0 0 10px #000;
         }
         #qr-result {
             margin-top: 20px;
             font-size: 20px;
         }
-        /* Style for the movable button */
+        #notification {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            z-index: 100;
+        }
         #moveableButton {
             position: fixed;
             bottom: 20px;
@@ -26,18 +39,6 @@
             border-radius: 5px;
             cursor: pointer;
             z-index: 100;
-        }
-        /* Notification style */
-        #notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px;
-            background-color: #28a745;
-            color: white;
-            border-radius: 5px;
-            display: none;
-            z-index: 101;
         }
     </style>
 </head>
@@ -54,28 +55,34 @@
         const notification = document.getElementById('notification');
         let streamStarted = false;
 
-        // Start camera
-        function startCamera() {
-            if (streamStarted) return;
-
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: { exact: "environment" } }  // This accesses the back camera
-            }).then(stream => {
+        // Ask for camera permission and start the scanning process
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } }  // Accesses the back camera
+                });
                 video.srcObject = stream;
                 video.play();
                 streamStarted = true;
-                scanQRCode();
-            }).catch(err => {
+                scanQRCode(); // Start scanning
+            } catch (err) {
                 qrResult.textContent = "Camera access error: " + err.message;
-            });
+            }
         }
 
         // Scan QR Code
         function scanQRCode() {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
+            let scanStart = Date.now();  // Track when scanning starts
 
             const scan = () => {
+                // Check if 10 seconds have passed
+                if (Date.now() - scanStart > 10000) {
+                    qrResult.textContent = "Scanning timed out.";
+                    return;
+                }
+
                 if (video.readyState === video.HAVE_ENOUGH_DATA) {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
@@ -91,7 +98,7 @@
                         if (isValidURL(qrCode.data)) {
                             qrResult.textContent = `Loading ${qrCode.data} in the background...`;
 
-                            // Load the URL in the background with a 3-second timeout
+                            // Fetch the URL in the background and show the notification
                             fetchWithTimeout(qrCode.data, 3000)
                                 .then(response => {
                                     if (response.ok) {
@@ -104,15 +111,10 @@
                                     console.error("Error loading URL: ", error);
                                     showNotification("Error loading URL or request timed out.");
                                 });
-
-                            // Restart scanning immediately without delay
-                            startCamera();  // Restart the scanning process
+                            return;
                         } else {
                             qrResult.textContent = `Scanned Data: ${qrCode.data}`;
-                            // Restart scanning immediately for non-URLs
-                            startCamera();  // Restart the scanning process
                         }
-                        return;
                     }
                 }
                 requestAnimationFrame(scan);
@@ -130,7 +132,7 @@
             }
         }
 
-        // Function to show a notification
+        // Function to show a notification for success or failure
         function showNotification(message) {
             notification.textContent = message;
             notification.style.display = 'block';
@@ -139,7 +141,7 @@
             }, 3000);  // Hide notification after 3 seconds
         }
 
-        // Fetch with timeout function
+        // Fetch with a timeout of 3 seconds
         function fetchWithTimeout(url, timeout = 3000) {
             return new Promise((resolve, reject) => {
                 const timer = setTimeout(() => {
