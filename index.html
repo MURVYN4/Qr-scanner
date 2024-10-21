@@ -3,34 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Camera Access Example</title>
+    <title>QR Code Reader with PiP</title>
     <style>
         video {
             width: 100%;
             height: auto;
-            border: 1px solid black;
+            border: 5px solid green; /* Border to indicate the scanning area */
+            box-shadow: 0 0 10px #000;
+        }
+        #qr-result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        #notification {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+            z-index: 100;
+        }
+        #moveableButton, #pipButton {
+            position: fixed;
+            bottom: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        #moveableButton {
+            right: 20px;
+        }
+        #pipButton {
+            left: 20px;
         }
     </style>
 </head>
 <body>
+    <h1>QR Code Reader</h1>
+    <video id="video" playsinline></video>
+    <div id="qr-result"></div>
+    <div id="notification">URL scanned!</div>
 
-<div id="container">
-    <video id="video" autoplay></video>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <script>
+        const video = document.getElementById('video');
+        const qrResult = document.getElementById('qr-result');
+        const notification = document.getElementById('notification');
+        const pipButton = document.getElementById('pipButton');
+        let streamStarted = false;
 
-<script>
-    const video = document.getElementById('video');
+        // Ask for camera permission and start the scanning process
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { exact: "environment" } }  // Accesses the back camera
+                });
+                video.srcObject = stream;
+                video.play();
+                streamStarted = true;
+                scanQRCode(); // Start scanning
+            } catch (err) {
+                qrResult.textContent = "Camera access error: " + err.message;
+            }
+        }
 
-    // Request camera access
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-            // Attach the video stream to the video element
-            video.srcObject = stream;
-        })
-        .catch(error => {
-            console.error("Error accessing the camera: ", error);
+        // Scan QR Code
+        function scanQRCode() {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            let scanStart = Date.now();  // Track when scanning starts
+
+            const scan = () => {
+                // Check if 10 seconds have passed
+                if (Date.now() - scanStart > 10000) {
+                    qrResult.textContent = "Scanning timed out.";
+                    return;
+                }
+
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const qrCode = jsQR(imageData.data, canvas.width, canvas.height);
+
+                    if (qrCode) {
+                        qrResult.textContent = `QR Code Data: ${qrCode.data}`;
+                        
+                        // Check if the QR code data is a URL
+                        if (isValidURL(qrCode.data)) {
+                            qrResult.textContent = `Scanned URL: ${qrCode.data}`;
+                            showNotification("URL scanned successfully!");
+                        } else {
+                            qrResult.textContent = `Scanned Data: ${qrCode.data}`;
+                        }
+                    }
+                }
+                requestAnimationFrame(scan);
+            };
+            scan();
+        }
+
+        // Helper function to check if the scanned data is a valid URL
+        function isValidURL(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        // Function to show a notification for success or failure
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);  // Hide notification after 3 seconds
+        }
+
+        // Automatically start the camera when the page loads
+        window.onload = () => {
+            startCamera();
+        };
+
+        // Enable Picture-in-Picture mode for the video
+        pipButton.addEventListener('click', async () => {
+            try {
+                if (video !== document.pictureInPictureElement) {
+                    await video.requestPictureInPicture();
+                    pipButton.textContent = 'Exit PiP';
+                } else {
+                    await document.exitPictureInPicture();
+                    pipButton.textContent = 'Enter PiP';
+                }
+            } catch (error) {
+                console.error('Error with PiP:', error);
+            }
         });
-</script>
 
+    </script>
+
+    <!-- Moveable Button -->
+    <button id="moveableButton" onclick="openWebsite()">Open Website</button>
+    <button id="pipButton">Enter PiP</button>
+
+    <script>
+        // Make the moveable button draggable
+        const moveableButton = document.getElementById("moveableButton");
+        moveableButton.onmousedown = function(event) {
+            let shiftX = event.clientX - moveableButton.getBoundingClientRect().left;
+            let shiftY = event.clientY - moveableButton.getBoundingClientRect().top;
+
+            moveButton(event.pageX, event.pageY);
+
+            function moveButton(pageX, pageY) {
+                moveableButton.style.left = pageX - shiftX + 'px';
+                moveableButton.style.top = pageY - shiftY + 'px';
+            }
+
+            function onMouseMove(event) {
+                moveButton(event.pageX, event.pageY);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+
+            moveableButton.onmouseup = function() {
+                document.removeEventListener('mousemove', onMouseMove);
+                moveableButton.onmouseup = null;
+            };
+        };
+
+        moveableButton.ondragstart = function() {
+            return false;
+        };
+    </script>
 </body>
 </html>
