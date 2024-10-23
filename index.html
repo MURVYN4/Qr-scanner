@@ -27,7 +27,7 @@
             display: none;
             z-index: 100;
         }
-        #moveableButton, #pipButton {
+        #moveableButton, #pipButton, #nfcButton {
             position: fixed;
             bottom: 20px;
             padding: 10px 20px;
@@ -45,6 +45,10 @@
         #pipButton {
             left: 20px;
         }
+        #nfcButton {
+            bottom: 60px;
+            left: 20px;
+        }
     </style>
 </head>
 <body>
@@ -59,6 +63,7 @@
         const qrResult = document.getElementById('qr-result');
         const notification = document.getElementById('notification');
         const pipButton = document.getElementById('pipButton');
+        const nfcButton = document.getElementById('nfcButton');
         let streamStarted = false;
 
         // Ask for camera permission and start the scanning process
@@ -80,15 +85,8 @@
         function scanQRCode() {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            let scanStart = Date.now();  // Track when scanning starts
 
             const scan = () => {
-                // Check if 10 seconds have passed
-                if (Date.now() - scanStart > 10000) {
-                    qrResult.textContent = "Scanning timed out.";
-                    return;
-                }
-
                 if (video.readyState === video.HAVE_ENOUGH_DATA) {
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
@@ -154,11 +152,26 @@
             }
         });
 
+        // NFC button click handler to start redirection after 10 seconds
+        nfcButton.addEventListener('click', () => {
+            showNotification("NFC enabled. Redirecting...");
+            
+            // First, go to QR scanner page
+            setTimeout(() => {
+                window.location.href = "https://murvyn4.github.io/Qr-scanner/";
+            }, 10000); // Wait 10 seconds
+
+            // Then, after another 10 seconds, go to attendance system page
+            setTimeout(() => {
+                window.location.href = "https://murvyn4.github.io/smart-attendance-system/";
+            }, 20000); // Wait 20 seconds total (10 seconds after the first redirect)
+        });
     </script>
 
     <!-- Moveable Button -->
     <button id="moveableButton" onclick="openWebsite()">Open Website</button>
     <button id="pipButton">Enter PiP</button>
+    <button id="nfcButton">Enable NFC</button>
 
     <script>
         // Make the moveable button draggable
